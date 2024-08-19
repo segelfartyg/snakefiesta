@@ -1,27 +1,23 @@
 <script lang="ts">
+  import { Direction } from "../enums/Direction";
+  import type { PlayerPosition } from "../interfaces/PlayerPosition";
   import FiestaTile from "./FiestaTile.svelte";
 
   // CONSTANTS
   const BOARD_TOTAL_HEIGHT_TILE_SIZE = 50;
   const BOARD_TOTAL_WIDTH_TILE_SIZE = 50;
 
-  // INTERFACE FOR THE INDIVIDUAL TILE IN THE UI LAYER
-  interface FiestaTileUI {
-    id: String;
-    color: String;
-  }
+  export let fiestaChunk = 1;
+  export let occupiedTiles = {
+    x: 1,
+    y: 1,
+  };
+  export let handlePlayerMovement;
 
   // WHERE THE HEAD PLAYER TILE IS LOCATED IN Y
   let PLAYER_TILE_Y = 15;
   // WHERE THE HEAD PLAYER TILE IS LOCATED IN X
   let PLAYER_TILE_X = 15;
-
-  enum Direction {
-    Right,
-    Down,
-    Left,
-    Up,
-  }
 
   let PLAYER_WISH_MOVE = Direction.Down;
 
@@ -87,7 +83,7 @@
     // CHECKING X AXIS FIRST
     if (WISH_MOVEMENT_X >= BOARD_TOTAL_WIDTH_TILE_SIZE) {
       WISH_MOVEMENT_X = 0;
-    } else if (WISH_MOVEMENT_X <= 0) {
+    } else if (WISH_MOVEMENT_X <= 0 - 1) {
       WISH_MOVEMENT_X = BOARD_TOTAL_WIDTH_TILE_SIZE - 1;
     }
 
@@ -98,15 +94,29 @@
       WISH_MOVEMENT_Y = BOARD_TOTAL_HEIGHT_TILE_SIZE - 1;
     }
 
+    console.log(occupiedTiles);
+    FIESTA_TILES[occupiedTiles.y][occupiedTiles.x] = {
+      id: "x" + occupiedTiles.x.toString() + "y" + occupiedTiles.y.toString(),
+      color: "pink",
+    };
+
     // MAKING THE MOVE, DEPENDING ON THE PREVIOUS MANIPULATION OF THE WISHED STATE
     FIESTA_TILES[WISH_MOVEMENT_Y][WISH_MOVEMENT_X] = {
       id: "x" + WISH_MOVEMENT_X.toString() + "y" + WISH_MOVEMENT_Y.toString(),
-      color: "black",
+      color: "green",
     };
 
     // SETTING CURRENT TILE POSITIONS
     PLAYER_TILE_X = WISH_MOVEMENT_X;
     PLAYER_TILE_Y = WISH_MOVEMENT_Y;
+
+    // console.log("POS: ", PLAYER_TILE_X, PLAYER_TILE_Y);
+    let move: PlayerPosition = {
+      x: PLAYER_TILE_X,
+      y: PLAYER_TILE_Y,
+    };
+
+    $: handlePlayerMovement(move);
   }, 100);
 
   function onKeyPress(event: { key: any }) {
@@ -134,7 +144,7 @@
     {/each}
   {/each}
 </div>
-<svelte:window on:keydown|preventDefault={onKeyPress} />
+<svelte:window on:keydown={onKeyPress} />
 
 <style>
   div {
