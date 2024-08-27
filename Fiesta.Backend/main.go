@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -11,6 +12,37 @@ import (
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
+
+var boardHeight int = 50
+var boardWidth int = 50
+
+type fiestaTile struct {
+	X int
+	Y int
+}
+
+type fiestaBoard struct {
+	Rows []fiestaRows
+}
+
+type fiestaRows struct {
+	Tiles []fiestaTile
+}
+
+func newFiestaBoard() *fiestaBoard {
+	b := fiestaBoard{
+		Rows: make([]fiestaRows, boardHeight),
+	}
+
+	for i := range b.Rows {
+		b.Rows[i].Tiles = make([]fiestaTile, boardWidth)
+
+		for j := range b.Rows[i].Tiles {
+			b.Rows[i].Tiles[j] = fiestaTile{X: j, Y: i}
+		}
+	}
+	return &b
+}
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL)
@@ -26,6 +58,11 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
+	board := newFiestaBoard()
+
+	fmt.Println(board)
+
 	flag.Parse()
 	hub := newHub()
 	go hub.run()
