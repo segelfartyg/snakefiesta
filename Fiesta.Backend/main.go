@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -16,6 +17,17 @@ var addr = flag.String("addr", ":8080", "http service address")
 var boardHeight int = 50
 var boardWidth int = 50
 
+const tickRate = 100
+
+type Direction int64
+
+const (
+	Right Direction = 0
+	Down  Direction = 1
+	Left  Direction = 2
+	Up    Direction = 3
+)
+
 type fiestaTile struct {
 	X int
 	Y int
@@ -29,16 +41,28 @@ type fiestaRows struct {
 	Tiles []fiestaTile
 }
 
+type playerMovementIntent struct {
+	PlayerId  string    `json:"playerId"`
+	X         int       `json:"X"`
+	Y         int       `json:"Y"`
+	Direction Direction `json:"direction"`
+}
+
+var playerPositions map[string]fiestaTile = make(map[string]fiestaTile)
+var playerIntents map[string]Direction = make(map[string]Direction)
+
 func newFiestaBoard() *fiestaBoard {
 	b := fiestaBoard{
 		Rows: make([]fiestaRows, boardHeight),
 	}
-
+	fmt.Println("INITIAL BOARD")
 	for i := range b.Rows {
+		fmt.Println("")
 		b.Rows[i].Tiles = make([]fiestaTile, boardWidth)
 
 		for j := range b.Rows[i].Tiles {
 			b.Rows[i].Tiles[j] = fiestaTile{X: j, Y: i}
+			fmt.Print(i, ":", j, ",")
 		}
 	}
 	return &b
@@ -59,13 +83,13 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	board := newFiestaBoard()
-
-	fmt.Println(board)
+	newFiestaBoard()
 
 	flag.Parse()
 	hub := newHub()
 	go hub.run()
+
+	go runGameLoop(hub)
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
@@ -73,6 +97,25 @@ func main() {
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
+	}
+}
+
+func runGameLoop(hub *Hub) {
+
+	// GAME TICKER
+	ticker := time.NewTicker(tickRate * time.Millisecond)
+
+	// GAME LOOP
+	for range ticker.C {
+
+		movePlayersBasedOnIntent()
+		res, err := json.Marshal(playerPositions)
+
+		if err != nil {
+			log.Fatal("ERROR GIVING BACK TO BROWSER (RIP CHARITY)")
+		}
+
+		hub.broadcast <- []byte(res)
 	}
 }
 
@@ -121,6 +164,7 @@ func (h *Hub) run() {
 				}
 			}
 		}
+
 	}
 }
 
@@ -180,8 +224,64 @@ func (c *Client) readPump() {
 			}
 			break
 		}
+
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+
+		intent := playerMovementIntent{}
+
+		fmt.Print("MESSAGE FROM CLIENT:", string(message))
+
+		err = json.Unmarshal([]byte(string(message)), &intent)
+
+		if err != nil {
+			log.Fatal("ERROR UNMARSHALLING")
+		}
+
+		if _, exists := playerPositions[intent.PlayerId]; exists {
+			playerIntents[intent.PlayerId] = intent.Direction
+		} else {
+			playerIntents[intent.PlayerId] = Right
+			playerPositions[intent.PlayerId] = fiestaTile{
+				X: 0,
+				Y: 0,
+			}
+		}
+
+		//intent.calculateNextPlayerPosition()
+
 		c.hub.broadcast <- message
+	}
+}
+
+func (i playerMovementIntent) calculateNextPlayerPosition() {
+	fmt.Println("INTENT IN JSON: ", i)
+
+	tile := fiestaTile{X: i.X, Y: i.Y}
+
+	playerPositions[i.PlayerId] = tile
+}
+
+func movePlayersBasedOnIntent() {
+	for player, direction := range playerIntents {
+		pos := playerPositions[player]
+		switch direction {
+		case Up:
+			pos.Y--
+			playerPositions[player] = pos
+			break
+		case Right:
+			pos.X++
+			playerPositions[player] = pos
+			break
+		case Down:
+			pos.Y++
+			playerPositions[player] = pos
+			break
+		case Left:
+			pos.X--
+			playerPositions[player] = pos
+			break
+		}
 	}
 }
 

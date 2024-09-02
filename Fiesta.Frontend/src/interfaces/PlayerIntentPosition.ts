@@ -1,10 +1,7 @@
 import type { Direction } from "../enums/Direction";
 
-export interface PlayerMovementIntent{
+export interface PlayerIntentPosition {
     x: Number,
     y: Number,
-    playerId: String,
-    timestamp: String,
     direction: Direction
-
-}
+  }

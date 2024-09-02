@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Direction } from "../enums/Direction";
-  import type { PlayerPosition } from "../interfaces/PlayerPosition";
+  import type { PlayerIntentPosition } from "../interfaces/PlayerIntentPosition";
   import FiestaTile from "./FiestaTile.svelte";
 
   // CONSTANTS
@@ -101,19 +101,20 @@
     };
 
     // MAKING THE MOVE, DEPENDING ON THE PREVIOUS MANIPULATION OF THE WISHED STATE
-    FIESTA_TILES[WISH_MOVEMENT_Y][WISH_MOVEMENT_X] = {
-      id: "x" + WISH_MOVEMENT_X.toString() + "y" + WISH_MOVEMENT_Y.toString(),
-      color: "green",
-    };
+    // FIESTA_TILES[WISH_MOVEMENT_Y][WISH_MOVEMENT_X] = {
+    //   id: "x" + WISH_MOVEMENT_X.toString() + "y" + WISH_MOVEMENT_Y.toString(),
+    //   color: "green",
+    // };
 
     // SETTING CURRENT TILE POSITIONS
     PLAYER_TILE_X = WISH_MOVEMENT_X;
     PLAYER_TILE_Y = WISH_MOVEMENT_Y;
 
     // console.log("POS: ", PLAYER_TILE_X, PLAYER_TILE_Y);
-    let move: PlayerPosition = {
+    let move: PlayerIntentPosition = {
       x: PLAYER_TILE_X,
       y: PLAYER_TILE_Y,
+      direction: PLAYER_WISH_MOVE
     };
 
     $: handlePlayerMovement(move);

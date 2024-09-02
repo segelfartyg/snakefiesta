@@ -2,7 +2,7 @@
   import FiestaBoard from "$lib/FiestaBoard.svelte";
   import { SERVER_URI } from "../consts/consts";
   import { onMount } from "svelte";
-  import type { PlayerPosition } from "../interfaces/PlayerPosition";
+  import type { PlayerIntentPosition } from "../interfaces/PlayerIntentPosition";
   import type { PlayerMovementIntent } from "../interfaces/PlayerMovementIntent";
   let websiteName = "Snake Fiesta";
   let fiestaChunk = 1;
@@ -21,21 +21,22 @@
       console.log("RECEIVED MESSAGE");
       let jsonRes = JSON.parse(msg.data);
 
-      if (jsonRes.playerId != username) {
+      if (jsonRes[username] != null || jsonRes[username] != undefined) {
         occupiedTiles = {
-          x: jsonRes.x,
-          y: jsonRes.y,
+          x: jsonRes[username].X,
+          y: jsonRes[username].Y,
         };
       }
     };
   });
 
-  function handlePlayerMovement(position: PlayerPosition) {
+  function handlePlayerMovement(positionIntent: PlayerIntentPosition) {
     let intent: PlayerMovementIntent = {
-      x: position.x,
-      y: position.y,
+      x: positionIntent.x,
+      y: positionIntent.y,
       playerId: username,
       timestamp: "utcnow",
+      direction: positionIntent.direction 
     };
 
     if (webSocket != null) {
