@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Direction } from "../enums/Direction";
   import type { PlayerIntentPosition } from "../interfaces/PlayerIntentPosition";
+  import type { ServerPlayerTiles } from "../interfaces/ServerPlayerTiles";
   import FiestaTile from "./FiestaTile.svelte";
 
   // CONSTANTS
@@ -8,10 +9,7 @@
   const BOARD_TOTAL_WIDTH_TILE_SIZE = 50;
 
   export let fiestaChunk = 1;
-  export let occupiedTiles = {
-    x: 1,
-    y: 1,
-  };
+  export let occupiedTiles: ServerPlayerTiles[] = [];
   export let handlePlayerMovement;
 
   // WHERE THE HEAD PLAYER TILE IS LOCATED IN Y
@@ -28,10 +26,10 @@
   let FIESTA_ROW: FiestaTileUI[] = [];
 
   // INITIALIZES THE BOARD, THIS IS NOT NEEDED (mostly) DURING GAME
-  for (let i = 0; i < BOARD_TOTAL_HEIGHT_TILE_SIZE; i++) {
+  for (let i = 0; i <= BOARD_TOTAL_HEIGHT_TILE_SIZE - 1; i++) {
     FIESTA_ROW = [];
 
-    for (let j = 0; j < BOARD_TOTAL_WIDTH_TILE_SIZE; j++) {
+    for (let j = 0; j <= BOARD_TOTAL_WIDTH_TILE_SIZE - 1; j++) {
       if (PLAYER_TILE_Y == i && PLAYER_TILE_X == j) {
         FIESTA_ROW.push({
           id: "x" + i.toString() + "y" + j.toString(),
@@ -80,37 +78,13 @@
       color: "white",
     };
 
-    // CHECKING X AXIS FIRST
-    if (WISH_MOVEMENT_X >= BOARD_TOTAL_WIDTH_TILE_SIZE) {
-      WISH_MOVEMENT_X = 0;
-    } else if (WISH_MOVEMENT_X <= 0 - 1) {
-      WISH_MOVEMENT_X = BOARD_TOTAL_WIDTH_TILE_SIZE - 1;
-    }
-
-    // CHECKING Y AXIS SECOND
-    if (WISH_MOVEMENT_Y >= BOARD_TOTAL_HEIGHT_TILE_SIZE) {
-      WISH_MOVEMENT_Y = 0;
-    } else if (WISH_MOVEMENT_Y <= 0 - 1) {
-      WISH_MOVEMENT_Y = BOARD_TOTAL_HEIGHT_TILE_SIZE - 1;
-    }
-
-    console.log(occupiedTiles);
-    FIESTA_TILES[occupiedTiles.y][occupiedTiles.x] = {
-      id: "x" + occupiedTiles.x.toString() + "y" + occupiedTiles.y.toString(),
+    occupiedTiles.forEach(player => {
+      FIESTA_TILES[player.y][player.x] = {
+      id: "x" + player.x.toString() + "y" + player.y.toString(),
       color: "pink",
-    };
-
-    // MAKING THE MOVE, DEPENDING ON THE PREVIOUS MANIPULATION OF THE WISHED STATE
-    // FIESTA_TILES[WISH_MOVEMENT_Y][WISH_MOVEMENT_X] = {
-    //   id: "x" + WISH_MOVEMENT_X.toString() + "y" + WISH_MOVEMENT_Y.toString(),
-    //   color: "green",
-    // };
-
-    // SETTING CURRENT TILE POSITIONS
-    PLAYER_TILE_X = WISH_MOVEMENT_X;
-    PLAYER_TILE_Y = WISH_MOVEMENT_Y;
-
-    // console.log("POS: ", PLAYER_TILE_X, PLAYER_TILE_Y);
+    };     
+    });
+ 
     let move: PlayerIntentPosition = {
       x: PLAYER_TILE_X,
       y: PLAYER_TILE_Y,
@@ -118,7 +92,7 @@
     };
 
     $: handlePlayerMovement(move);
-  }, 100);
+  }, 500);
 
   function onKeyPress(event: { key: any }) {
     switch (event.key) {

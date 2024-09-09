@@ -4,10 +4,11 @@
   import { onMount } from "svelte";
   import type { PlayerIntentPosition } from "../interfaces/PlayerIntentPosition";
   import type { PlayerMovementIntent } from "../interfaces/PlayerMovementIntent";
+  import type { ServerPlayerTiles } from "../interfaces/ServerPlayerTiles";
   let websiteName = "Snake Fiesta";
   let fiestaChunk = 1;
-  let occupiedTiles = { x: 1, y: 1 };
-  let username = "";
+  let occupiedTiles: ServerPlayerTiles[] = [];
+  let username= "";
   let webSocket: WebSocket;
 
   onMount(() => {
@@ -20,13 +21,15 @@
     webSocket.onmessage = (msg) => {
       console.log("RECEIVED MESSAGE");
       let jsonRes = JSON.parse(msg.data);
-
-      if (jsonRes[username] != null || jsonRes[username] != undefined) {
-        occupiedTiles = {
-          x: jsonRes[username].X,
-          y: jsonRes[username].Y,
-        };
-      }
+      console.log(Object.keys(jsonRes))
+      occupiedTiles = []
+      Object.keys(jsonRes).forEach(playerId => {
+       occupiedTiles.push({
+          playerId: jsonRes[playerId].playerId,
+          x: jsonRes[playerId].X,
+          y: jsonRes[playerId].Y
+        })
+      });
     };
   });
 

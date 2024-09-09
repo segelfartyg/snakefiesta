@@ -17,7 +17,7 @@ var addr = flag.String("addr", ":8080", "http service address")
 var boardHeight int = 50
 var boardWidth int = 50
 
-const tickRate = 100
+const tickRate = 1000
 
 type Direction int64
 
@@ -229,8 +229,6 @@ func (c *Client) readPump() {
 
 		intent := playerMovementIntent{}
 
-		fmt.Print("MESSAGE FROM CLIENT:", string(message))
-
 		err = json.Unmarshal([]byte(string(message)), &intent)
 
 		if err != nil {
@@ -246,41 +244,49 @@ func (c *Client) readPump() {
 				Y: 0,
 			}
 		}
-
-		//intent.calculateNextPlayerPosition()
-
-		c.hub.broadcast <- message
 	}
 }
 
 func (i playerMovementIntent) calculateNextPlayerPosition() {
 	fmt.Println("INTENT IN JSON: ", i)
-
 	tile := fiestaTile{X: i.X, Y: i.Y}
-
 	playerPositions[i.PlayerId] = tile
 }
 
 func movePlayersBasedOnIntent() {
 	for player, direction := range playerIntents {
 		pos := playerPositions[player]
+		fmt.Println("MOVING PLAYER FROM:")
+		fmt.Println(pos.X, " : ", pos.Y)
 		switch direction {
 		case Up:
-			pos.Y--
+			if pos.Y-1 < 0 {
+				pos.Y = boardHeight - 1
+			} else {
+				pos.Y--
+			}
 			playerPositions[player] = pos
-			break
 		case Right:
-			pos.X++
+			if pos.X+1 > boardWidth-1 {
+				pos.X = 0
+			} else {
+				pos.X++
+			}
 			playerPositions[player] = pos
-			break
 		case Down:
-			pos.Y++
+			if pos.Y+1 > boardHeight-1 {
+				pos.Y = 0
+			} else {
+				pos.Y++
+			}
 			playerPositions[player] = pos
-			break
 		case Left:
-			pos.X--
+			if pos.X-1 < 0 {
+				pos.X = boardWidth - 1
+			} else {
+				pos.X--
+			}
 			playerPositions[player] = pos
-			break
 		}
 	}
 }
@@ -310,14 +316,8 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-			w.Write(message)
 
-			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-c.send)
-			}
+			w.Write(message)
 
 			if err := w.Close(); err != nil {
 				return
