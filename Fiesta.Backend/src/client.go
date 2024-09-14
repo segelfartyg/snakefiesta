@@ -55,8 +55,6 @@ func (c *Client) ReadPump() {
 			break
 		}
 
-		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-
 		intent := playerMovementIntent{}
 
 		err = json.Unmarshal([]byte(string(message)), &intent)
@@ -65,11 +63,11 @@ func (c *Client) ReadPump() {
 			log.Fatal("ERROR UNMARSHALLING")
 		}
 
-		if _, exists := playerPositions[intent.PlayerId]; exists {
+		if _, exists := fiestaChunks["spawnChunk"][intent.PlayerId]; exists {
 			playerIntents[intent.PlayerId] = intent.Direction
 		} else {
 			playerIntents[intent.PlayerId] = Right
-			playerPositions[intent.PlayerId] = fiestaTile{
+			fiestaChunks["spawnChunk"][intent.PlayerId] = fiestaTile{
 				X: 0,
 				Y: 0,
 			}

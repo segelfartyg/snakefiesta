@@ -43,31 +43,12 @@ type playerMovementIntent struct {
 }
 
 var fiestaChunkList = [2]string{"spawnChunk", "chunkyCunk"}
-var fiestaCunks map[string]map[string]fiestaTile = make(map[string]map[string]fiestaTile)
-var playerPositions map[string]fiestaTile = make(map[string]fiestaTile)
+var fiestaChunks map[string]map[string]fiestaTile = make(map[string]map[string]fiestaTile)
 var playerIntents map[string]Direction = make(map[string]Direction)
-
-func newFiestaBoard() *fiestaBoard {
-	b := fiestaBoard{
-		Rows: make([]fiestaRows, boardHeight),
-	}
-	fmt.Println("INITIAL BOARD")
-	for i := range b.Rows {
-		fmt.Println("")
-		b.Rows[i].Tiles = make([]fiestaTile, boardWidth)
-
-		for j := range b.Rows[i].Tiles {
-			b.Rows[i].Tiles[j] = fiestaTile{X: j, Y: i}
-			fmt.Print(i, ":", j, ",")
-		}
-	}
-	return &b
-}
 
 func main() {
 
-	//newFiestaBoard()
-	fiestaCunks["spawnChunk"] = make(map[string]fiestaTile)
+	fiestaChunks["spawnChunk"] = make(map[string]fiestaTile)
 	flag.Parse()
 	hub := newHub()
 	go hub.Run()
@@ -85,7 +66,7 @@ func runGameLoop(hub *Hub) {
 	for range ticker.C {
 
 		movePlayersBasedOnIntent()
-		res, err := json.Marshal(fiestaCunks["spawnChunk"])
+		res, err := json.Marshal(fiestaChunks["spawnChunk"])
 
 		if err != nil {
 			log.Fatal("ERROR GIVING BACK TO BROWSER (RIP CHARITY)")
@@ -97,7 +78,7 @@ func runGameLoop(hub *Hub) {
 
 func movePlayersBasedOnIntent() {
 	for player, direction := range playerIntents {
-		pos := fiestaCunks["spawnChunk"][player]
+		pos := fiestaChunks["spawnChunk"][player]
 		fmt.Println("MOVING PLAYER FROM:")
 		fmt.Println(pos.X, " : ", pos.Y)
 		switch direction {
@@ -107,28 +88,28 @@ func movePlayersBasedOnIntent() {
 			} else {
 				pos.Y--
 			}
-			fiestaCunks["spawnChunk"][player] = pos
+			fiestaChunks["spawnChunk"][player] = pos
 		case Right:
 			if pos.X+1 > boardWidth-1 {
 				pos.X = 0
 			} else {
 				pos.X++
 			}
-			fiestaCunks["spawnChunk"][player] = pos
+			fiestaChunks["spawnChunk"][player] = pos
 		case Down:
 			if pos.Y+1 > boardHeight-1 {
 				pos.Y = 0
 			} else {
 				pos.Y++
 			}
-			fiestaCunks["spawnChunk"][player] = pos
+			fiestaChunks["spawnChunk"][player] = pos
 		case Left:
 			if pos.X-1 < 0 {
 				pos.X = boardWidth - 1
 			} else {
 				pos.X--
 			}
-			fiestaCunks["spawnChunk"][player] = pos
+			fiestaChunks["spawnChunk"][player] = pos
 		}
 	}
 }
