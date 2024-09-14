@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"log"
 	"time"
@@ -56,7 +55,7 @@ func (c *Client) ReadPump() {
 			break
 		}
 
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 
 		intent := playerMovementIntent{}
 

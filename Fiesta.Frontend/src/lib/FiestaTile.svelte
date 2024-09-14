@@ -5,7 +5,7 @@
     background: white;
     height:10px;
     width:10px;
-    border:solid rgba(0, 0, 0, 0.055) 1px;
+    border:solid rgba(0, 0, 0, 0.027) 1px;
  }
 
 </style>

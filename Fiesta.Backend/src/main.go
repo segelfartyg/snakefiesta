@@ -9,9 +9,9 @@ import (
 )
 
 var boardHeight int = 50
-var boardWidth int = 50
+var boardWidth int = 150
 
-const tickRate = 1000
+const tickRate = 100
 
 type Direction int64
 
@@ -42,6 +42,8 @@ type playerMovementIntent struct {
 	Direction Direction `json:"direction"`
 }
 
+var fiestaChunkList = [2]string{"spawnChunk", "chunkyCunk"}
+var fiestaCunks map[string]map[string]fiestaTile = make(map[string]map[string]fiestaTile)
 var playerPositions map[string]fiestaTile = make(map[string]fiestaTile)
 var playerIntents map[string]Direction = make(map[string]Direction)
 
@@ -64,8 +66,8 @@ func newFiestaBoard() *fiestaBoard {
 
 func main() {
 
-	newFiestaBoard()
-
+	//newFiestaBoard()
+	fiestaCunks["spawnChunk"] = make(map[string]fiestaTile)
 	flag.Parse()
 	hub := newHub()
 	go hub.Run()
@@ -83,7 +85,7 @@ func runGameLoop(hub *Hub) {
 	for range ticker.C {
 
 		movePlayersBasedOnIntent()
-		res, err := json.Marshal(playerPositions)
+		res, err := json.Marshal(fiestaCunks["spawnChunk"])
 
 		if err != nil {
 			log.Fatal("ERROR GIVING BACK TO BROWSER (RIP CHARITY)")
@@ -93,20 +95,9 @@ func runGameLoop(hub *Hub) {
 	}
 }
 
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
-)
-
-func (i playerMovementIntent) calculateNextPlayerPosition() {
-	fmt.Println("INTENT IN JSON: ", i)
-	tile := fiestaTile{X: i.X, Y: i.Y}
-	playerPositions[i.PlayerId] = tile
-}
-
 func movePlayersBasedOnIntent() {
 	for player, direction := range playerIntents {
-		pos := playerPositions[player]
+		pos := fiestaCunks["spawnChunk"][player]
 		fmt.Println("MOVING PLAYER FROM:")
 		fmt.Println(pos.X, " : ", pos.Y)
 		switch direction {
@@ -116,28 +107,28 @@ func movePlayersBasedOnIntent() {
 			} else {
 				pos.Y--
 			}
-			playerPositions[player] = pos
+			fiestaCunks["spawnChunk"][player] = pos
 		case Right:
 			if pos.X+1 > boardWidth-1 {
 				pos.X = 0
 			} else {
 				pos.X++
 			}
-			playerPositions[player] = pos
+			fiestaCunks["spawnChunk"][player] = pos
 		case Down:
 			if pos.Y+1 > boardHeight-1 {
 				pos.Y = 0
 			} else {
 				pos.Y++
 			}
-			playerPositions[player] = pos
+			fiestaCunks["spawnChunk"][player] = pos
 		case Left:
 			if pos.X-1 < 0 {
 				pos.X = boardWidth - 1
 			} else {
 				pos.X--
 			}
-			playerPositions[player] = pos
+			fiestaCunks["spawnChunk"][player] = pos
 		}
 	}
 }

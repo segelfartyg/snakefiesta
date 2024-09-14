@@ -6,7 +6,7 @@
 
   // CONSTANTS
   const BOARD_TOTAL_HEIGHT_TILE_SIZE = 50;
-  const BOARD_TOTAL_WIDTH_TILE_SIZE = 50;
+  const BOARD_TOTAL_WIDTH_TILE_SIZE = 150;
 
   export let fiestaChunk = 1;
   export let occupiedTiles: ServerPlayerTiles[] = [];
@@ -92,7 +92,7 @@
     };
 
     $: handlePlayerMovement(move);
-  }, 500);
+  }, 50);
 
   function onKeyPress(event: { key: any }) {
     switch (event.key) {
@@ -123,13 +123,13 @@
 
 <style>
   div {
-    background: blue;
-    height: 500px;
+    background: rgb(255, 255, 255);
     width: fit-content;
     display: grid;
     /* REMEMBER TO CHANGE THESE VALUES IF YOU WANT THE BOARD SIZE TO CHANGE */
-    grid-template-columns: repeat(50, 1fr);
+    grid-template-columns: repeat(150, 1fr);
     grid-template-rows: repeat(50, 1fr);
+    border:solid black 2px;
     margin: auto;
   }
 </style>
