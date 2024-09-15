@@ -31,6 +31,10 @@ type Client struct {
 
 	// Buffered channel of outbound messages.
 	send chan []byte
+
+	chunk Chunk
+
+	playerId string
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -62,14 +66,16 @@ func (c *Client) ReadPump() {
 		if err != nil {
 			log.Fatal("ERROR UNMARSHALLING")
 		}
-
-		if _, exists := fiestaChunks["spawnChunk"][intent.PlayerId]; exists {
+		c.playerId = intent.PlayerId
+		if _, exists := playerIntents[intent.PlayerId]; exists {
 			playerIntents[intent.PlayerId] = intent.Direction
 		} else {
 			playerIntents[intent.PlayerId] = Right
-			fiestaChunks["spawnChunk"][intent.PlayerId] = fiestaTile{
-				X: 0,
-				Y: 0,
+			playerChunks[intent.PlayerId] = Spawn
+			fiestaChunks[Spawn][intent.PlayerId] = fiestaTile{
+				X:     0,
+				Y:     0,
+				Chunk: Spawn,
 			}
 		}
 	}
@@ -99,6 +105,10 @@ func (c *Client) WritePump() {
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
+			}
+
+			if err != nil {
+				log.Fatal("ERROR MARSHALLING TO CLIENT (RIP?)")
 			}
 
 			w.Write(message)

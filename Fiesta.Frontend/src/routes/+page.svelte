@@ -22,8 +22,10 @@
       console.log("RECEIVED MESSAGE");
       let jsonRes = JSON.parse(msg.data);
       console.log(Object.keys(jsonRes))
+      console.log(jsonRes)
       occupiedTiles = []
       Object.keys(jsonRes).forEach(playerId => {
+        console.log(jsonRes[playerId].Chunk);
        occupiedTiles.push({
           playerId: jsonRes[playerId].playerId,
           x: jsonRes[playerId].X,
