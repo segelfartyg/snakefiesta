@@ -53,6 +53,8 @@ func (h *Hub) Run() {
 				delete(h.clients, c)
 				close(c.send)
 			}
+
+		// BROADCASTING TO EVERY CLIENT
 		case message := <-h.broadcast:
 			for c := range h.clients {
 				select {
@@ -63,6 +65,7 @@ func (h *Hub) Run() {
 				}
 			}
 
+		// BROADCASTING TO EVERY CLIENT IN THE SPAWN CHUNK
 		case spawnMsg := <-h.broadcastSpawn:
 			fmt.Println("BROADCASTING SPAWN:", string(spawnMsg))
 			for c := range h.spawnClients {
@@ -74,6 +77,7 @@ func (h *Hub) Run() {
 				}
 			}
 
+		// BROADCASTING TO EVERY CLIENT IN THE DRUNK CHUNK
 		case drunkMsg := <-h.broadcastDrunk:
 			fmt.Println("BROADCASTING DRUNK:", string(drunkMsg))
 			for c := range h.drunkClients {
@@ -84,21 +88,19 @@ func (h *Hub) Run() {
 					delete(h.clients, c)
 				}
 			}
+		// HANDLING A CHUNK CHANGE, RETRIEVING PLAYERID OF THE CHANGE AND ITS NEW CHUNK
 		case chunkChanged := <-h.chunkChange:
-			fmt.Println("GOT THIS CHANGE EVENT")
-			fmt.Println(chunkChanged)
-
 			var playerId = ""
 			var playerChunk = Spawn
 
+			// RETRIEVING THE VALUES
 			for id, chunk := range chunkChanged {
-				fmt.Println("ID: ", id)
 				playerId = id
-				fmt.Println("VALUE: ", chunk)
 				playerChunk = chunk
 			}
+
+			// CHANGING CHUNK ON THE CLIENT LEVEL
 			for c := range h.clients {
-				fmt.Println("DOING SOMETHING PER CLIENT", c.playerId)
 				if c.playerId == playerId {
 					delete(h.spawnClients, c)
 					h.drunkClients[c] = Drunk
@@ -106,7 +108,7 @@ func (h *Hub) Run() {
 				}
 			}
 		}
-		// FOREACH CLIENT IN THE CHANGED CHUNK, SEND A MESSAGE
+
 	}
 
 }

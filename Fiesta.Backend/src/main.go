@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"time"
 )
@@ -53,15 +52,21 @@ type playerMovementIntent struct {
 	Direction Direction `json:"direction"`
 }
 
+// AN ENTIRE BOARD, EVERY CHUNK MAPS TO ANOTHER MAP THAT MAPS PLAYERID TO A POSITION IN THAT CHUNK
 var fiestaChunks map[Chunk]map[string]fiestaTile = make(map[Chunk]map[string]fiestaTile)
 
+// MAP FOR STORING WHERE EVERY PLAYER WISHES TO MOVE
 var playerIntents map[string]Direction = make(map[string]Direction)
+
+// MAP FOR STORING WHERE EVERY PLAYER IS
 var playerChunks map[string]Chunk = make(map[string]Chunk)
 
 func main() {
 
+	// TODO: CREATE A DATA STRUCTURE AND DYNAMICALLY TO THIS
 	fiestaChunks[Spawn] = make(map[string]fiestaTile)
 	fiestaChunks[Drunk] = make(map[string]fiestaTile)
+
 	flag.Parse()
 	hub := newHub()
 	go hub.Run()
@@ -78,16 +83,22 @@ func runGameLoop(hub *Hub) {
 	// GAME LOOP
 	for range ticker.C {
 
+		// MANIPULATING THE fiestaChunk BOARD AND ITS STATE
 		movePlayersBasedOnIntent(hub)
-		resSpawn, err := json.Marshal(fiestaChunks[Spawn])
-		resDrunk, err := json.Marshal(fiestaChunks[Drunk])
 
-		fmt.Println(string(resSpawn))
-		fmt.Println(string(resDrunk))
+		// RETRIEVING A JSON OBJECT FOR THE SPAWN CHUNK
+		resSpawn, err := json.Marshal(fiestaChunks[Spawn])
 		if err != nil {
 			log.Fatal("ERROR GIVING BACK TO BROWSER (RIP CHARITY)")
 		}
 
+		// RETRIEVING A JSON OBJECT FOR THE DRUNK CHUNK
+		resDrunk, err := json.Marshal(fiestaChunks[Drunk])
+		if err != nil {
+			log.Fatal("ERROR GIVING BACK TO BROWSER (RIP CHARITY)")
+		}
+
+		// BROADCASTING EVENTS TO EACH CHUNK AND THEIR CLIENTS
 		hub.broadcastSpawn <- []byte(resSpawn)
 		hub.broadcastDrunk <- []byte(resDrunk)
 	}
@@ -95,15 +106,12 @@ func runGameLoop(hub *Hub) {
 
 func movePlayersBasedOnIntent(hub *Hub) {
 	for player, direction := range playerIntents {
+
+		// RETRIEVING THE POSITION OF THE PLAYER, IN THE CHUNK OF THE PLAYER
 		pos := fiestaChunks[playerChunks[player]][player]
-		fmt.Println("MOVING PLAYER FROM:")
-		fmt.Println(pos.X, " : ", pos.Y)
-		fmt.Println("PLAYER CHUNK:")
-		fmt.Println(playerChunks[player])
 		switch direction {
 		case Up:
 			if pos.Y-1 < 0 {
-
 				delete(fiestaChunks[playerChunks[player]], player)
 				playerChunks[player] = Drunk
 

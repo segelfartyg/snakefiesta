@@ -37,11 +37,7 @@ type Client struct {
 	playerId string
 }
 
-// readPump pumps messages from the websocket connection to the hub.
-//
-// The application runs readPump in a per-connection goroutine. The application
-// ensures that there is at most one reader on a connection by executing all
-// reads from this goroutine.
+// READS MESSAGES COMING FROM THE CLIENT
 func (c *Client) ReadPump() {
 	defer func() {
 		c.hub.unregister <- c
@@ -66,10 +62,15 @@ func (c *Client) ReadPump() {
 		if err != nil {
 			log.Fatal("ERROR UNMARSHALLING")
 		}
+
+		// TODO: SET PLAYER ID DURING WEBSOCKET CONNECTION REGISTRATION
 		c.playerId = intent.PlayerId
+
+		// SETTING INLY INTENT IF THERE IS A PLAYER PRESENT ALREADY
 		if _, exists := playerIntents[intent.PlayerId]; exists {
 			playerIntents[intent.PlayerId] = intent.Direction
 		} else {
+			// REGISTERING THE CLIENT IN THE SPAWN CHUNK.
 			playerIntents[intent.PlayerId] = Right
 			playerChunks[intent.PlayerId] = Spawn
 			fiestaChunks[Spawn][intent.PlayerId] = fiestaTile{
@@ -81,11 +82,7 @@ func (c *Client) ReadPump() {
 	}
 }
 
-// writePump pumps messages from the hub to the websocket connection.
-//
-// A goroutine running writePump is started for each connection. The
-// application ensures that there is at most one writer to a connection by
-// executing all writes from this goroutine.
+// SENDS MESSAGES TO THE CLIENT
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -103,14 +100,10 @@ func (c *Client) WritePump() {
 			}
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
 
 			if err != nil {
 				log.Fatal("ERROR MARSHALLING TO CLIENT (RIP?)")
 			}
-
 			w.Write(message)
 
 			if err := w.Close(); err != nil {
