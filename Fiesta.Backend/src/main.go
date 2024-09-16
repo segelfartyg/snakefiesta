@@ -49,7 +49,7 @@ type playerMovementIntent struct {
 	Direction Direction `json:"direction"`
 }
 
-var chunks = []Chunk{Spawn, Drunk, Dunky}
+var chunks = []Chunk{Spawn, Drunk, Dunky, Chunky, Lunky, Sunky}
 
 // AN ENTIRE BOARD, EVERY CHUNK MAPS TO ANOTHER MAP THAT MAPS PLAYERID TO A POSITION IN THAT CHUNK
 var fiestaChunks map[Chunk]map[string]fiestaTile = make(map[Chunk]map[string]fiestaTile)
@@ -100,7 +100,6 @@ func movePlayersBasedOnIntent(hub *Hub) {
 		case Up:
 			if pos.Y-1 < 0 {
 				pos.Y = boardHeight - 1
-				pos.Chunk = Drunk
 			} else {
 				pos.Y--
 			}
