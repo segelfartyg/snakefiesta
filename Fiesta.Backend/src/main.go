@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -32,6 +30,12 @@ const (
 	Sunky  Chunk = 5
 )
 
+type chunkChangeEvent struct {
+	PreviousChunk Chunk
+	NextChunk     Chunk
+	PlayerId      string
+}
+
 type fiestaTile struct {
 	X     int
 	Y     int
@@ -58,11 +62,6 @@ var playerChunkPositions map[string]Chunk = make(map[string]Chunk)
 
 func main() {
 
-	fmt.Print(chunks[0])
-	// TODO: CREATE A DATA STRUCTURE AND DYNAMICALLY TO THIS
-	//fiestaChunks[Spawn] = make(map[string]fiestaTile)
-	//fiestaChunks[Drunk] = make(map[string]fiestaTile)
-
 	for _, c := range chunks {
 		fiestaChunks[c] = make(map[string]fiestaTile)
 	}
@@ -87,21 +86,7 @@ func runGameLoop(hub *Hub) {
 		// MANIPULATING THE fiestaChunk BOARD AND ITS STATE
 		movePlayersBasedOnIntent(hub)
 
-		// RETRIEVING A JSON OBJECT FOR THE SPAWN CHUNK
-		resSpawn, err := json.Marshal(fiestaChunks[getSpawnChunk()])
-		if err != nil {
-			log.Fatal("ERROR GIVING BACK TO BROWSER (RIP CHARITY)")
-		}
-
-		// RETRIEVING A JSON OBJECT FOR THE DRUNK CHUNK
-		// resAll, err := json.Marshal(fiestaChunks)
-		// if err != nil {
-		// 	log.Fatal("ERROR GIVING BACK TO BROWSER (RIP CHARITY)")
-		// }
-
-		fmt.Print(string(resSpawn))
-		// BROADCASTING EVENTS TO EACH CHUNK AND THEIR CLIENTS
-		//hub.broadcastSpawn <- []byte(resSpawn)
+		// BROADCASTING BOARD TO EACH CHUNK AND THEIR CLIENTS
 		hub.broadcastAll <- fiestaChunks
 	}
 }
@@ -124,7 +109,6 @@ func movePlayersBasedOnIntent(hub *Hub) {
 			if pos.X+1 > boardWidth-1 {
 				pos.X = 0
 				handleChunkExit(direction, player, &pos, hub)
-				fiestaChunks[playerChunkPositions[player]][player] = pos
 			} else {
 				pos.X++
 			}
@@ -139,6 +123,7 @@ func movePlayersBasedOnIntent(hub *Hub) {
 		case Left:
 			if pos.X-1 < 0 {
 				pos.X = boardWidth - 1
+				handleChunkExit(direction, player, &pos, hub)
 			} else {
 				pos.X--
 			}
@@ -154,16 +139,18 @@ func getSpawnChunk() Chunk {
 func handleChunkExit(direction Direction, playerId string, position *fiestaTile, hub *Hub) {
 	delete(fiestaChunks[playerChunkPositions[playerId]], playerId)
 
-	nextChunk := getNextChunk(Right, playerId)
-	mapToBeSent := map[string]Chunk{
-		playerId: nextChunk,
+	nextChunk := getNextChunk(direction, playerId)
+	changeEvent := chunkChangeEvent{
+		PreviousChunk: playerChunkPositions[playerId],
+		NextChunk:     nextChunk,
+		PlayerId:      playerId,
 	}
 
 	playerChunkPositions[playerId] = nextChunk
 	position.Chunk = nextChunk
-	fmt.Print("NEXT CHUNK", position.Chunk)
-
-	hub.chunkChange <- mapToBeSent
+	fmt.Println("NEXT CHUNK", nextChunk)
+	fmt.Println("PREV CHUNK", changeEvent.PreviousChunk)
+	hub.chunkChange <- changeEvent
 }
 
 func getNextChunk(direction Direction, playerId string) Chunk {
@@ -172,7 +159,6 @@ func getNextChunk(direction Direction, playerId string) Chunk {
 	case Up:
 		return playerChunkPositions[playerId]
 	case Right:
-		fmt.Println(chunks[playerChunkPositions[playerId]+1])
 		return chunks[playerChunkPositions[playerId]+1]
 	case Down:
 		return playerChunkPositions[playerId]

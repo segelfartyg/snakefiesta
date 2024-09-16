@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 )
 
@@ -12,21 +11,14 @@ type Hub struct {
 	// Registered clients.
 	clients map[*Client]bool
 
-	spawnClients map[*Client]Chunk
-
-	drunkClients map[*Client]Chunk
-
 	// Inbound messages from the clients.
 	broadcast chan []byte
-	// Inbound messages from the clients.
-	broadcastSpawn chan []byte
-	// Inbound messages from the clients.
-	broadcastDrunk chan []byte
 
-	// Inbound messages from the clients.
+	// CHANNEL FOR BROADCASTING TO ALL CLIENTS
 	broadcastAll chan map[Chunk]map[string]fiestaTile
 
-	chunkChange chan map[string]Chunk
+	// CHANNEL FOR LISTENING TO CHANGE OF CHUNK
+	chunkChange chan chunkChangeEvent
 
 	// Register requests from the clients.
 	register chan *Client
@@ -34,30 +26,25 @@ type Hub struct {
 	// Unregister requests from clients.
 	unregister chan *Client
 
-	klienter map[Chunk]map[*Client]Chunk
+	chunkClients map[Chunk]map[*Client]bool
 }
 
 func newHub(chunks []Chunk) *Hub {
 
-	klienter := make(map[Chunk]map[*Client]Chunk)
+	chunkClients := make(map[Chunk]map[*Client]bool)
 
 	for _, v := range chunks {
-		klienter[v] = make(map[*Client]Chunk)
+		chunkClients[v] = make(map[*Client]bool)
 	}
 
-	fmt.Println(klienter)
 	return &Hub{
-		klienter:       klienter,
-		broadcast:      make(chan []byte),
-		broadcastSpawn: make(chan []byte),
-		broadcastDrunk: make(chan []byte),
-		broadcastAll:   make(chan map[Chunk]map[string]fiestaTile),
-		chunkChange:    make(chan map[string]Chunk),
-		register:       make(chan *Client),
-		unregister:     make(chan *Client),
-		clients:        make(map[*Client]bool),
-		spawnClients:   make(map[*Client]Chunk),
-		drunkClients:   make(map[*Client]Chunk),
+		chunkClients: chunkClients,
+		broadcast:    make(chan []byte),
+		broadcastAll: make(chan map[Chunk]map[string]fiestaTile),
+		chunkChange:  make(chan chunkChangeEvent),
+		register:     make(chan *Client),
+		unregister:   make(chan *Client),
+		clients:      make(map[*Client]bool),
 	}
 }
 
@@ -66,7 +53,7 @@ func (h *Hub) Run() {
 		select {
 		case c := <-h.register:
 			h.clients[c] = true
-			h.klienter[Spawn][c] = Spawn
+			h.chunkClients[Spawn][c] = true
 		case c := <-h.unregister:
 			if _, ok := h.clients[c]; ok {
 				delete(h.clients, c)
@@ -84,69 +71,37 @@ func (h *Hub) Run() {
 				}
 			}
 
-		// BROADCASTING TO EVERY CLIENT IN THE SPAWN CHUNK
-		case spawnMsg := <-h.broadcastSpawn:
-			fmt.Println("BROADCASTING SPAWN:", string(spawnMsg))
-			for c := range h.spawnClients {
-				select {
-				case c.send <- spawnMsg:
-				default:
-					close(c.send)
-					delete(h.clients, c)
-				}
-			}
-
-		// BROADCASTING TO EVERY CLIENT IN THE DRUNK CHUNK
+		// GETTING EVENT WITH THE ENTIRE BOARD
 		case entireBoard := <-h.broadcastAll:
-			fmt.Println("BROADCASTING DRUNK:", entireBoard)
 
-			for key, clientOfBoard := range entireBoard {
-				fmt.Println("KEY: ", key)
-				fmt.Println("CLIENT: ", clientOfBoard)
-			}
+			// LOOPING THROUGH EVERY CLIENT FOR EACH CHUNK
+			for chunk, _ := range h.chunkClients {
 
-			for key, _ := range h.klienter {
-
-				for c := range h.klienter[key] {
-					fmt.Print("HEJ DU: ", c.playerId, c.chunk)
-
-					sendJson, err := json.Marshal(entireBoard[key])
+				// LOOPING THROUGH EACH CLIENT IN THE CHUNK
+				for clientInChunk := range h.chunkClients[chunk] {
+					sendJson, err := json.Marshal(entireBoard[chunk])
 					if err != nil {
 						log.Fatal("ERROR GIVING BACK TO BROWSER (RIP CHARITY)")
 					}
-
-					c.send <- []byte(sendJson)
-
+					// SENDING CHUNK DATA TO CLIENTS OF THE CHUNK
+					clientInChunk.send <- []byte(sendJson)
 				}
 			}
 
-			// }
-
-			// for c := range h.klienter {
-			// 	select {
-			// 	case c.send <- klientMsg:
-			// 	default:
-			// 		close(c.send)
-			// 		delete(h.clients, c)
-			// 	}
-			// }
 		// HANDLING A CHUNK CHANGE, RETRIEVING PLAYERID OF THE CHANGE AND ITS NEW CHUNK
-		case chunkChanged := <-h.chunkChange:
-			var playerId = ""
-			var playerChunk = Spawn
+		case chunkChange := <-h.chunkChange:
 
 			// RETRIEVING THE VALUES
-			for id, chunk := range chunkChanged {
-				playerId = id
-				playerChunk = chunk
-			}
-			fmt.Println(playerId, playerChunk)
-			// CHANGING CHUNK ON THE CLIENT LEVEL
+			playerId := chunkChange.PlayerId
+			previousChunk := chunkChange.PreviousChunk
+			nextChunk := chunkChange.NextChunk
+
+			// CHANGING CHUNK ON THE CONNECTION LEVEL
 			for c := range h.clients {
 				if c.playerId == playerId {
-					delete(h.klienter[Spawn], c)
-					h.klienter[playerChunk][c] = playerChunk
-					c.chunk = playerChunk
+					delete(h.chunkClients[previousChunk], c)
+					h.chunkClients[nextChunk][c] = true
+					c.chunk = nextChunk
 				}
 			}
 		}
