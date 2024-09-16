@@ -20,6 +20,7 @@
 
     webSocket.onmessage = (msg) => {
       console.log("RECEIVED MESSAGE");
+      console.log(msg.data)
       let jsonRes = JSON.parse(msg.data);
       console.log(Object.keys(jsonRes))
       console.log(jsonRes)

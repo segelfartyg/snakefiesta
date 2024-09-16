@@ -72,7 +72,7 @@ func (c *Client) ReadPump() {
 		} else {
 			// REGISTERING THE CLIENT IN THE SPAWN CHUNK.
 			playerIntents[intent.PlayerId] = Right
-			playerChunks[intent.PlayerId] = Spawn
+			playerChunkPositions[intent.PlayerId] = getSpawnChunk()
 			fiestaChunks[Spawn][intent.PlayerId] = fiestaTile{
 				X:     0,
 				Y:     0,

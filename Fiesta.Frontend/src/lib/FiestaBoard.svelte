@@ -92,7 +92,7 @@
     };
 
     $: handlePlayerMovement(move);
-  }, 50);
+  }, 100);
 
   function onKeyPress(event: { key: any }) {
     switch (event.key) {

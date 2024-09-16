@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+)
 
 // Hub maintains the set of active clients and broadcasts messages to the
 // clients.
@@ -19,6 +23,9 @@ type Hub struct {
 	// Inbound messages from the clients.
 	broadcastDrunk chan []byte
 
+	// Inbound messages from the clients.
+	broadcastAll chan map[Chunk]map[string]fiestaTile
+
 	chunkChange chan map[string]Chunk
 
 	// Register requests from the clients.
@@ -26,13 +33,25 @@ type Hub struct {
 
 	// Unregister requests from clients.
 	unregister chan *Client
+
+	klienter map[Chunk]map[*Client]Chunk
 }
 
-func newHub() *Hub {
+func newHub(chunks []Chunk) *Hub {
+
+	klienter := make(map[Chunk]map[*Client]Chunk)
+
+	for _, v := range chunks {
+		klienter[v] = make(map[*Client]Chunk)
+	}
+
+	fmt.Println(klienter)
 	return &Hub{
+		klienter:       klienter,
 		broadcast:      make(chan []byte),
 		broadcastSpawn: make(chan []byte),
 		broadcastDrunk: make(chan []byte),
+		broadcastAll:   make(chan map[Chunk]map[string]fiestaTile),
 		chunkChange:    make(chan map[string]Chunk),
 		register:       make(chan *Client),
 		unregister:     make(chan *Client),
@@ -47,7 +66,7 @@ func (h *Hub) Run() {
 		select {
 		case c := <-h.register:
 			h.clients[c] = true
-			h.spawnClients[c] = Spawn
+			h.klienter[Spawn][c] = Spawn
 		case c := <-h.unregister:
 			if _, ok := h.clients[c]; ok {
 				delete(h.clients, c)
@@ -78,16 +97,39 @@ func (h *Hub) Run() {
 			}
 
 		// BROADCASTING TO EVERY CLIENT IN THE DRUNK CHUNK
-		case drunkMsg := <-h.broadcastDrunk:
-			fmt.Println("BROADCASTING DRUNK:", string(drunkMsg))
-			for c := range h.drunkClients {
-				select {
-				case c.send <- drunkMsg:
-				default:
-					close(c.send)
-					delete(h.clients, c)
+		case entireBoard := <-h.broadcastAll:
+			fmt.Println("BROADCASTING DRUNK:", entireBoard)
+
+			for key, clientOfBoard := range entireBoard {
+				fmt.Println("KEY: ", key)
+				fmt.Println("CLIENT: ", clientOfBoard)
+			}
+
+			for key, _ := range h.klienter {
+
+				for c := range h.klienter[key] {
+					fmt.Print("HEJ DU: ", c.playerId, c.chunk)
+
+					sendJson, err := json.Marshal(entireBoard[key])
+					if err != nil {
+						log.Fatal("ERROR GIVING BACK TO BROWSER (RIP CHARITY)")
+					}
+
+					c.send <- []byte(sendJson)
+
 				}
 			}
+
+			// }
+
+			// for c := range h.klienter {
+			// 	select {
+			// 	case c.send <- klientMsg:
+			// 	default:
+			// 		close(c.send)
+			// 		delete(h.clients, c)
+			// 	}
+			// }
 		// HANDLING A CHUNK CHANGE, RETRIEVING PLAYERID OF THE CHANGE AND ITS NEW CHUNK
 		case chunkChanged := <-h.chunkChange:
 			var playerId = ""
@@ -98,12 +140,12 @@ func (h *Hub) Run() {
 				playerId = id
 				playerChunk = chunk
 			}
-
+			fmt.Println(playerId, playerChunk)
 			// CHANGING CHUNK ON THE CLIENT LEVEL
 			for c := range h.clients {
 				if c.playerId == playerId {
-					delete(h.spawnClients, c)
-					h.drunkClients[c] = Drunk
+					delete(h.klienter[Spawn], c)
+					h.klienter[playerChunk][c] = playerChunk
 					c.chunk = playerChunk
 				}
 			}
