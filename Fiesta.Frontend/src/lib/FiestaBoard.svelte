@@ -1,98 +1,82 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { Direction } from "../enums/Direction";
-  import type { PlayerIntentPosition } from "../interfaces/PlayerIntentPosition";
+  import type { PlayerIntentDirection } from "../interfaces/PlayerIntentDirection";
   import type { ServerPlayerTiles } from "../interfaces/ServerPlayerTiles";
-  import FiestaTile from "./FiestaTile.svelte";
 
   // CONSTANTS
-  const BOARD_TOTAL_HEIGHT_TILE_SIZE = 50;
-  const BOARD_TOTAL_WIDTH_TILE_SIZE = 150;
-
-  export let fiestaChunk = 1;
+  const BOARD_TOTAL_HEIGHT_TILE_SIZE = 500;
+  const BOARD_TOTAL_WIDTH_TILE_SIZE = 1500;
+  const FIELD_COLOR = "#ffffff";
+  const GRID_COLOR = "#ffffff";
+  const SNAKE_COLOR = "#206020";
+  const CELL_SIZE = 10;
+  const width = BOARD_TOTAL_WIDTH_TILE_SIZE;
+  const height = BOARD_TOTAL_HEIGHT_TILE_SIZE;
+  let image: any;
   export let occupiedTiles: ServerPlayerTiles[] = [];
+  export let previousOccupiedTiles: ServerPlayerTiles[] = [];
   export let handlePlayerMovement;
 
-  // WHERE THE HEAD PLAYER TILE IS LOCATED IN Y
-  let PLAYER_TILE_Y = 15;
-  // WHERE THE HEAD PLAYER TILE IS LOCATED IN X
-  let PLAYER_TILE_X = 15;
+  let canvas: any;
+  let context: any;
 
-  let PLAYER_WISH_MOVE = Direction.Down;
+  let PLAYER_WISH_MOVE = Direction.Up;
 
-  // 2 DIMENSIONAL ARRAY FOR X/Y AXIS OF THE FIESTA
-  let FIESTA_TILES: FiestaTileUI[][] = [];
-
-  // POPULATES THE ABOVE
-  let FIESTA_ROW: FiestaTileUI[] = [];
-
-  // INITIALIZES THE BOARD, THIS IS NOT NEEDED (mostly) DURING GAME
-  for (let i = 0; i <= BOARD_TOTAL_HEIGHT_TILE_SIZE - 1; i++) {
-    FIESTA_ROW = [];
-
-    for (let j = 0; j <= BOARD_TOTAL_WIDTH_TILE_SIZE - 1; j++) {
-      if (PLAYER_TILE_Y == i && PLAYER_TILE_X == j) {
-        FIESTA_ROW.push({
-          id: "x" + i.toString() + "y" + j.toString(),
-          color: "black",
-        });
-      } else {
-        FIESTA_ROW.push({
-          id: "x" + i.toString() + "y" + j.toString(),
-          color: "white",
-        });
-      }
-    }
-
-    FIESTA_TILES.push(FIESTA_ROW);
-  }
-
+  // LOOP FOR SENDING NEW INTENT EVENTS TO SERVER
   setInterval(() => {
-    let WISH_MOVEMENT_X = PLAYER_TILE_X;
-    let WISH_MOVEMENT_Y = PLAYER_TILE_Y;
-
-    switch (PLAYER_WISH_MOVE) {
-      case Direction.Right:
-        WISH_MOVEMENT_X = PLAYER_TILE_X + 1;
-        WISH_MOVEMENT_Y = PLAYER_TILE_Y;
-        break;
-      case Direction.Down:
-        WISH_MOVEMENT_X = PLAYER_TILE_X;
-        WISH_MOVEMENT_Y = PLAYER_TILE_Y + 1;
-        break;
-      case Direction.Left:
-        WISH_MOVEMENT_X = PLAYER_TILE_X - 1;
-        WISH_MOVEMENT_Y = PLAYER_TILE_Y;
-        break;
-      case Direction.Up:
-        WISH_MOVEMENT_X = PLAYER_TILE_X;
-        WISH_MOVEMENT_Y = PLAYER_TILE_Y - 1;
-        break;
-      default:
-        WISH_MOVEMENT_X = PLAYER_TILE_X;
-        WISH_MOVEMENT_Y = PLAYER_TILE_Y;
-    }
-
-    // MAKING BAKDEL WHITE
-    FIESTA_TILES[PLAYER_TILE_Y][PLAYER_TILE_X] = {
-      id: "x" + PLAYER_TILE_X.toString() + "y" + PLAYER_TILE_Y.toString(),
-      color: "white",
+    let move: PlayerIntentDirection = {
+      direction: PLAYER_WISH_MOVE,
     };
-
-    occupiedTiles.forEach(player => {
-      FIESTA_TILES[player.y][player.x] = {
-      id: "x" + player.x.toString() + "y" + player.y.toString(),
-      color: "pink",
-    };     
-    });
- 
-    let move: PlayerIntentPosition = {
-      x: PLAYER_TILE_X,
-      y: PLAYER_TILE_Y,
-      direction: PLAYER_WISH_MOVE
-    };
-
-    $: handlePlayerMovement(move);
+    handlePlayerMovement(move);
   }, 100);
+
+  onMount(() => {
+    context = canvas.getContext("2d");
+    image =  document.getElementById("image");
+    draw_field();
+  });
+
+  // LOOP FOR SETTING THE BOARD FROM TILE ARRAYS POPULATED FROM WS EVENTS
+  setInterval(() => {
+    previousOccupiedTiles.forEach((tile) => {
+      context.fillStyle = FIELD_COLOR;
+      context.strokeStyle = GRID_COLOR;
+      context.fillRect(tile.x * 10, tile.y * 10, CELL_SIZE, CELL_SIZE);
+      context.strokeRect(tile.x * 10, tile.y * 10, CELL_SIZE, CELL_SIZE);
+    });
+    occupiedTiles.forEach((tile) => {
+      context.fillStyle = SNAKE_COLOR;
+      context.strokeStyle = GRID_COLOR;
+      context.textBaseLine ="middle"
+      context.font = "10px Arial";
+      context.drawImage(image, tile.x * 10, tile.y * 10, CELL_SIZE, CELL_SIZE);
+      // context.fillRect(tile.x * 10, tile.y * 10, CELL_SIZE, CELL_SIZE);
+      // context.strokeRect(tile.x * 10, tile.y * 10, CELL_SIZE, CELL_SIZE);
+    });
+  }, 10);
+
+  const draw_field = function () {
+    context.fillStyle = FIELD_COLOR;
+    context.strokeStyle = FIELD_COLOR;
+    context.fillRect(
+      0,
+      0,
+      BOARD_TOTAL_WIDTH_TILE_SIZE,
+      BOARD_TOTAL_HEIGHT_TILE_SIZE
+    );
+    
+    for (let i = CELL_SIZE; i < BOARD_TOTAL_HEIGHT_TILE_SIZE; i += CELL_SIZE) {
+      context.moveTo(0, i);
+      context.lineTo(BOARD_TOTAL_WIDTH_TILE_SIZE, i);
+      context.stroke();
+    }
+    for (let i = CELL_SIZE; i < BOARD_TOTAL_WIDTH_TILE_SIZE; i += CELL_SIZE) {
+      context.moveTo(i, 0);
+      context.lineTo(i, BOARD_TOTAL_HEIGHT_TILE_SIZE);
+      context.stroke();
+    }
+  };
 
   function onKeyPress(event: { key: any }) {
     switch (event.key) {
@@ -113,12 +97,10 @@
 </script>
 
 <div>
-  {#each FIESTA_TILES as item, index (item)}
-    {#each FIESTA_TILES[index] as cell (cell)}
-      <FiestaTile id={cell.id} color={cell.color} />
-    {/each}
-  {/each}
+  <canvas {width} {height} bind:this={canvas} />
 </div>
+
+<img id="image" src="src\lib\favicon.png">
 <svelte:window on:keydown={onKeyPress} />
 
 <style>
@@ -127,9 +109,18 @@
     width: fit-content;
     display: grid;
     /* REMEMBER TO CHANGE THESE VALUES IF YOU WANT THE BOARD SIZE TO CHANGE */
-    grid-template-columns: repeat(150, 1fr);
-    grid-template-rows: repeat(50, 1fr);
-    border:solid black 2px;
+
+    border: solid black 2px;
     margin: auto;
+  }
+
+  canvas {
+    width: 1500px;
+    height: 500px;
+    border: solid green 1px;
+  }
+
+  #image {
+    display:none;
   }
 </style>

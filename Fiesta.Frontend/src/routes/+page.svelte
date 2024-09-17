@@ -2,12 +2,13 @@
   import FiestaBoard from "$lib/FiestaBoard.svelte";
   import { SERVER_URI } from "../consts/consts";
   import { onMount } from "svelte";
-  import type { PlayerIntentPosition } from "../interfaces/PlayerIntentPosition";
+  import type { PlayerIntentDirection } from "../interfaces/PlayerIntentDirection";
   import type { PlayerMovementIntent } from "../interfaces/PlayerMovementIntent";
   import type { ServerPlayerTiles } from "../interfaces/ServerPlayerTiles";
   let websiteName = "Snake Fiesta";
   let fiestaChunk = 1;
   let occupiedTiles: ServerPlayerTiles[] = [];
+  let previousOccupiedTiles: ServerPlayerTiles[] = [];
   let username= "";
   let webSocket: WebSocket;
 
@@ -24,6 +25,7 @@
       let jsonRes = JSON.parse(msg.data);
       console.log(Object.keys(jsonRes))
       console.log(jsonRes)
+      previousOccupiedTiles = occupiedTiles
       occupiedTiles = []
       Object.keys(jsonRes).forEach(playerId => {
         console.log(jsonRes[playerId].Chunk);
@@ -36,10 +38,8 @@
     };
   });
 
-  function handlePlayerMovement(positionIntent: PlayerIntentPosition) {
+  function handlePlayerMovement(positionIntent: PlayerIntentDirection) {
     let intent: PlayerMovementIntent = {
-      x: positionIntent.x,
-      y: positionIntent.y,
       playerId: username,
       timestamp: "utcnow",
       direction: positionIntent.direction 
@@ -53,14 +53,13 @@
 
 <div>
   {websiteName}
-  <FiestaBoard {fiestaChunk} {occupiedTiles} {handlePlayerMovement} />
+  <FiestaBoard {occupiedTiles} {previousOccupiedTiles} {handlePlayerMovement} />
   <input bind:value={username} placeholder="enter your name" />
 </div>
 
 <style>
   div {
     width: 100%;
-    height:70vh;
     display: flex;
     flex-direction: column;
     align-items: center;

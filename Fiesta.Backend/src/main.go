@@ -9,7 +9,7 @@ import (
 var boardHeight int = 50
 var boardWidth int = 150
 
-const tickRate = 100
+const tickRate = 50
 
 type Direction int64
 type Chunk int64
